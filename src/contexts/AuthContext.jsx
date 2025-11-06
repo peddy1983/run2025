@@ -129,24 +129,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LINE Login（需要後端支援）
+  // LINE Login
   const loginWithLine = () => {
     const lineChannelId = import.meta.env.VITE_LINE_CHANNEL_ID;
-    const callbackUrl = import.meta.env.VITE_LINE_CALLBACK_URL;
+    const callbackUrl = import.meta.env.VITE_LINE_CALLBACK_URL || 
+                        `${window.location.origin}/auth/callback`;
     
     if (!lineChannelId || lineChannelId === 'your-line-channel-id') {
-      alert('LINE Login 尚未設定完成，請先使用 Google 登入\n\n詳細設定方式請參考 ENV_SETUP.md');
+      alert('LINE Login 尚未設定完成\n\n請確認 .env 檔案中的 VITE_LINE_CHANNEL_ID 已設定');
       return;
     }
     
     const state = Math.random().toString(36).substring(7);
     
-    // 儲存 state 用於驗證
+    // 儲存 state 和 callback URL 用於驗證
     sessionStorage.setItem('line_login_state', state);
+    sessionStorage.setItem('line_callback_url', callbackUrl);
     
     // 導向 LINE 登入頁面
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${lineChannelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid`;
+    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${lineChannelId}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}&scope=profile%20openid%20email`;
     
+    console.log('🔄 導向 LINE 登入頁面...');
     window.location.href = lineAuthUrl;
   };
 
