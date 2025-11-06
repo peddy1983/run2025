@@ -7,11 +7,22 @@ const admin = require('firebase-admin');
 // 初始化 Firebase Admin（使用環境變數）
 if (!admin.apps.length) {
   try {
+    // 處理 Private Key：移除引號並正確處理換行符
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    
+    // 移除可能的外層引號
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.slice(1, -1);
+    }
+    
+    // 替換 \n 字串為實際換行符
+    privateKey = privateKey.replace(/\\n/g, '\n');
+    
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        privateKey: privateKey
       })
     });
     console.log('✅ Firebase Admin 初始化成功');
