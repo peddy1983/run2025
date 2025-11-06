@@ -27,7 +27,11 @@ dist-ssr
 .env
 .env.local
 .env.production
+netlify-env-ready.txt
+netlify-env-variables.txt
 
+# Firebase Service Account
+*firebase-adminsdk*.json
 
 
 
