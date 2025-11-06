@@ -2,6 +2,35 @@
 // 接收 LINE 訊息事件，用於取得群組 ID 和處理訊息
 
 const crypto = require('crypto');
+const axios = require('axios');
+
+// 發送 LINE 訊息的函數
+async function sendLineMessage(replyToken, messages) {
+  const accessToken = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN;
+  
+  try {
+    const response = await axios.post(
+      'https://api.line.me/v2/bot/message/reply',
+      {
+        replyToken: replyToken,
+        messages: messages
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(`LINE API 錯誤: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+    }
+    throw error;
+  }
+}
 
 exports.handler = async (event, context) => {
   // 設定 CORS 標頭
@@ -78,11 +107,29 @@ exports.handler = async (event, context) => {
         console.log('💬 訊息內容:', evt.message.text);
       }
 
-      // 記錄加入事件
+      // 處理加入事件 - 發送歡迎訊息
       if (evt.type === 'join') {
         console.log('🎉 機器人被加入群組');
         if (evt.source.type === 'group') {
           console.log('🎯 新群組 ID:', evt.source.groupId);
+          
+          // 發送歡迎訊息
+          try {
+            await sendLineMessage(evt.replyToken, [
+              {
+                type: 'text',
+                text: '🎉 大家好！我是板橋路跑小幫手！\n\n' +
+                      '我可以幫助大家：\n' +
+                      '✅ 查看最新的路跑活動\n' +
+                      '✅ 接收活動提醒通知\n' +
+                      '✅ 管理報名活動\n\n' +
+                      '歡迎大家一起來參加板橋路跑活動！💪🏃‍♂️'
+              }
+            ]);
+            console.log('✅ 歡迎訊息已發送');
+          } catch (error) {
+            console.error('❌ 發送歡迎訊息失敗:', error.message);
+          }
         }
       }
     }

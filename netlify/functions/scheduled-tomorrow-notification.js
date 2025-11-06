@@ -97,7 +97,8 @@ exports.handler = async (event, context) => {
       const timeStr = activityDate.toLocaleTimeString('zh-TW', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
+        timeZone: 'Asia/Taipei'
       });
 
       message += `${index + 1}️⃣ 活動 #${activity.activityNumber}\n`;

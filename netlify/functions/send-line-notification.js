@@ -55,18 +55,20 @@ exports.handler = async (event, context) => {
       throw new Error('缺少 LINE_GROUP_ID 環境變數');
     }
 
-    // 格式化日期時間
+    // 格式化日期時間（確保使用台灣時區）
     const activityDate = new Date(activity.date);
     const dateStr = activityDate.toLocaleDateString('zh-TW', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      weekday: 'short'
+      weekday: 'short',
+      timeZone: 'Asia/Taipei'
     });
     const timeStr = activityDate.toLocaleTimeString('zh-TW', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
+      timeZone: 'Asia/Taipei'
     });
 
     // 組合通知訊息
