@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase/config';
+import { auth } from '../firebase/config';
 import { signInWithCustomToken } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleLineCallback = async () => {
@@ -18,33 +18,58 @@ const AuthCallback = () => {
       // 驗證 state
       if (!state || state !== savedState) {
         setError('驗證失敗：狀態不匹配');
+        setLoading(false);
         return;
       }
 
       if (!code) {
         setError('驗證失敗：缺少授權碼');
+        setLoading(false);
         return;
       }
 
       try {
-        // 這裡需要後端 API 來處理 LINE 登入
-        // 由於 Netlify 是靜態託管，您需要使用 Netlify Functions 或其他 serverless 服務
-        // 暫時的解決方案：使用 Firebase Auth 的其他登入方式
+        console.log('🔄 開始處理 LINE 登入回調...');
         
-        // TODO: 實作 LINE Login 的後端處理
-        // 1. 用 code 向 LINE 換取 access token
-        // 2. 用 access token 取得使用者資料
-        // 3. 在 Firebase 中建立或更新使用者
-        // 4. 用 Firebase Custom Token 登入
+        // 步驟 1: 調用 Netlify Function 處理 LINE 登入
+        const callbackUrl = sessionStorage.getItem('line_callback_url') || 
+                           `${window.location.origin}/auth/callback`;
         
-        alert('LINE Login 整合需要後端支援。目前請使用 Firebase 的其他登入方式。');
+        const response = await fetch('/.netlify/functions/line-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            code: code,
+            redirectUri: callbackUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '登入失敗');
+        }
+
+        console.log('✅ 後端處理成功，取得 Custom Token');
+
+        // 步驟 2: 使用 Custom Token 登入 Firebase
+        await signInWithCustomToken(auth, data.customToken);
+        console.log('✅ Firebase 登入成功:', data.user.displayName);
+
+        // 清理 session storage
+        sessionStorage.removeItem('line_login_state');
+        sessionStorage.removeItem('line_callback_url');
+
+        // 導向首頁
+        console.log('🎉 LINE 登入完成，導向首頁');
         navigate('/');
         
       } catch (error) {
-        console.error('登入失敗:', error);
-        setError('登入失敗，請稍後再試');
-      } finally {
-        sessionStorage.removeItem('line_login_state');
+        console.error('❌ LINE 登入失敗:', error);
+        setError(error.message || '登入失敗，請稍後再試');
+        setLoading(false);
       }
     };
 
