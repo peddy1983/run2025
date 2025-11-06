@@ -11,6 +11,7 @@ const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
 
   const isParticipating = user && activity.participants?.some(p => p.uid === user.uid);
   const isCreator = user && activity.creatorId === user.uid;
+  const isPastActivity = new Date(activity.date) < new Date(); // 判斷是否為過去的活動
 
   const handleJoin = async () => {
     if (!user) {
@@ -197,7 +198,11 @@ const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
 
       {/* 操作按鈕 */}
       <div className="flex space-x-2">
-        {!isCreator && (
+        {isPastActivity ? (
+          <div className="flex-1 py-2 text-center text-sm text-gray-500 bg-gray-100 border border-gray-200 rounded-lg">
+            ⏰ 活動已結束
+          </div>
+        ) : !isCreator ? (
           <button
             onClick={handleJoin}
             disabled={loading}
@@ -209,8 +214,7 @@ const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
           >
             {loading ? '處理中...' : isParticipating ? '✓ 已參加' : '加入'}
           </button>
-        )}
-        {isCreator && (
+        ) : (
           <span className="flex-1 py-2 text-center text-sm text-gray-500 border border-gray-200 rounded-lg">
             這是您發起的活動
           </span>

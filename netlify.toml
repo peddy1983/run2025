@@ -19,5 +19,11 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Scheduled Functions - 每日活動通知
+# 每天早上 6:00 台灣時間 = 22:00 UTC 前一天
+[[functions]]
+  name = "scheduled-daily-notification"
+  schedule = "0 22 * * *"
+
 
 

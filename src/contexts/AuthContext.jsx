@@ -3,10 +3,6 @@ import { auth, db } from '../firebase/config';
 import { 
   onAuthStateChanged, 
   signOut as firebaseSignOut, 
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword
 } from 'firebase/auth';
@@ -112,23 +108,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Google 登入 - 使用重新導向方式（部署後測試）
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
-    
-    try {
-      console.log('🔄 開始 Google 登入流程（使用重新導向方式）...');
-      await signInWithRedirect(auth, provider);
-      console.log('🔄 正在導向 Google 登入頁面...');
-    } catch (error) {
-      console.error('❌ 啟動登入失敗:', error);
-      alert('啟動登入失敗：' + (error.message || '請稍後再試'));
-    }
-  };
-
   // LINE Login
   const loginWithLine = () => {
     const lineChannelId = import.meta.env.VITE_LINE_CHANNEL_ID;
@@ -165,47 +144,6 @@ export const AuthProvider = ({ children }) => {
 
   // 監聽認證狀態
   useEffect(() => {
-    let isProcessingRedirect = false;
-    
-    // 檢查是否有重新導向的登入結果
-    const checkRedirectResult = async () => {
-      if (isProcessingRedirect) {
-        console.log('⏭️ 已經在處理重新導向結果，跳過');
-        return;
-      }
-      
-      try {
-        isProcessingRedirect = true;
-        console.log('🔍 檢查重新導向登入結果...');
-        const result = await getRedirectResult(auth);
-        if (result) {
-          console.log('✅ Google 登入成功（重新導向）:', result.user.email);
-          console.log('👤 使用者資料:', {
-            uid: result.user.uid,
-            email: result.user.email,
-            displayName: result.user.displayName
-          });
-          // 嘗試儲存使用者資料到 Firestore（但不依賴它）
-          saveUserToFirestore(result.user).catch(err => {
-            console.warn('⚠️ Firestore 儲存失敗，但不影響登入:', err.message);
-          });
-        } else {
-          console.log('ℹ️ 沒有重新導向登入結果');
-        }
-      } catch (error) {
-        console.error('❌ 處理重新導向結果失敗:', error);
-        console.error('錯誤代碼:', error.code);
-        console.error('錯誤訊息:', error.message);
-        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-          alert('登入失敗：' + (error.message || '請稍後再試'));
-        }
-      } finally {
-        isProcessingRedirect = false;
-      }
-    };
-    
-    checkRedirectResult();
-    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         console.log('✅ Firebase Authentication 使用者已登入:', firebaseUser.email);
@@ -253,7 +191,6 @@ export const AuthProvider = ({ children }) => {
     loading,
     registerWithEmail,
     loginWithEmail,
-    loginWithGoogle,
     loginWithLine,
     signOut
   };

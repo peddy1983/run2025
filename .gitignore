@@ -33,7 +33,8 @@ netlify-env-variables.txt
 # Firebase Service Account
 *firebase-adminsdk*.json
 
-
+# Configuration Backup (contains sensitive data)
+CONFIG_BACKUP.md
 
 # Local Netlify folder
 .netlify

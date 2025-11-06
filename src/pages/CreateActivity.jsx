@@ -61,7 +61,7 @@ const CreateActivity = () => {
       }
       
       // 建立活動
-      await addDoc(collection(db, 'activities'), {
+      const activityData = {
         activityNumber: nextActivityNumber,
         creatorId: user.uid,
         creatorName: user.displayName,
@@ -73,7 +73,41 @@ const CreateActivity = () => {
         notes: formData.notes,
         participants: [],
         createdAt: serverTimestamp()
-      });
+      };
+      
+      await addDoc(collection(db, 'activities'), activityData);
+
+      // 發送 LINE 通知到群組
+      try {
+        const response = await fetch('/.netlify/functions/send-line-notification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            activity: {
+              activityNumber: nextActivityNumber,
+              creatorName: user.displayName,
+              date: activityDate.toISOString(),
+              pace: formData.pace,
+              distance: formData.distance,
+              route: formData.route,
+              notes: formData.notes
+            }
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ LINE 通知已發送');
+        } else {
+          console.warn('⚠️ LINE 通知發送失敗:', result.error);
+        }
+      } catch (lineError) {
+        console.error('❌ LINE 通知發送錯誤:', lineError);
+        // 不影響活動建立，只記錄錯誤
+      }
 
       alert(`活動建立成功！（活動序號 #${nextActivityNumber}）`);
       navigate('/');

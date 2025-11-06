@@ -8,21 +8,22 @@ import ActivityCard from '../components/ActivityCard';
 const Home = () => {
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [activities, setActivities] = useState([]);
-  const [allActivities, setAllActivities] = useState([]);
+  const [futureActivities, setFutureActivities] = useState([]);
+  const [pastActivities, setPastActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('date'); // 'date' 或 'all'
+  const [viewMode, setViewMode] = useState('date'); // 'date'、'past' 或 'future'
 
-  // 監聽所有未來活動（用於日期選擇器顯示）
+  // 監聽所有未來活動
   useEffect(() => {
     const today = startOfDay(new Date());
     
-    const q = query(
+    const futureQuery = query(
       collection(db, 'activities'),
       where('date', '>=', today.toISOString()),
       orderBy('date', 'asc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeFuture = onSnapshot(futureQuery, (snapshot) => {
       const activitiesData = [];
       snapshot.forEach((doc) => {
         activitiesData.push({
@@ -30,10 +31,34 @@ const Home = () => {
           ...doc.data()
         });
       });
-      setAllActivities(activitiesData);
+      setFutureActivities(activitiesData);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeFuture();
+  }, []);
+
+  // 監聽所有過去活動
+  useEffect(() => {
+    const today = startOfDay(new Date());
+    
+    const pastQuery = query(
+      collection(db, 'activities'),
+      where('date', '<', today.toISOString()),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribePast = onSnapshot(pastQuery, (snapshot) => {
+      const activitiesData = [];
+      snapshot.forEach((doc) => {
+        activitiesData.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      setPastActivities(activitiesData);
+    });
+
+    return () => unsubscribePast();
   }, []);
 
   // 監聽當前選定日期的活動
@@ -41,7 +66,8 @@ const Home = () => {
     const startDate = startOfDay(selectedDate);
     const endDate = endOfDay(selectedDate);
 
-    // 從 allActivities 中篩選當天的活動
+    // 從 futureActivities 和 pastActivities 中篩選當天的活動
+    const allActivities = [...futureActivities, ...pastActivities];
     const todayActivities = allActivities.filter(activity => {
       const activityDate = new Date(activity.date);
       return activityDate >= startDate && activityDate <= endDate;
@@ -49,7 +75,7 @@ const Home = () => {
     
     setActivities(todayActivities);
     setLoading(false);
-  }, [selectedDate, allActivities]);
+  }, [selectedDate, futureActivities, pastActivities]);
 
   const handleDateChange = (newDate) => {
     setSelectedDate(startOfDay(newDate));
@@ -57,7 +83,10 @@ const Home = () => {
   };
 
   // 顯示的活動列表（根據視圖模式）
-  const displayActivities = viewMode === 'all' ? allActivities : activities;
+  const displayActivities = 
+    viewMode === 'past' ? pastActivities :
+    viewMode === 'future' ? futureActivities :
+    activities;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -67,23 +96,33 @@ const Home = () => {
           <div className="flex space-x-2">
             <button
               onClick={() => setViewMode('date')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              📅 按日期查看
+              📅 按日期
             </button>
             <button
-              onClick={() => setViewMode('all')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                viewMode === 'all'
+              onClick={() => setViewMode('past')}
+              className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors ${
+                viewMode === 'past'
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              📋 全部活動
+              ⏮️ 過去
+            </button>
+            <button
+              onClick={() => setViewMode('future')}
+              className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors ${
+                viewMode === 'future'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              ⏭️ 未來
             </button>
           </div>
         </div>
@@ -94,18 +133,28 @@ const Home = () => {
         <DatePicker 
           selectedDate={selectedDate} 
           onDateChange={handleDateChange}
-          activities={allActivities}
+          activities={[...futureActivities, ...pastActivities]}
         />
       )}
 
       {/* 活動列表 */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* 全部活動模式的提示 */}
-        {viewMode === 'all' && (
+        {/* 過去活動模式的提示 */}
+        {viewMode === 'past' && (
           <div className="mb-4 text-center">
-            <h2 className="text-xl font-bold text-gray-900">未來所有活動</h2>
+            <h2 className="text-xl font-bold text-gray-900">⏮️ 過去活動</h2>
             <p className="text-sm text-gray-500 mt-1">
-              共 {allActivities.length} 個活動
+              共 {pastActivities.length} 個活動
+            </p>
+          </div>
+        )}
+
+        {/* 未來活動模式的提示 */}
+        {viewMode === 'future' && (
+          <div className="mb-4 text-center">
+            <h2 className="text-xl font-bold text-gray-900">⏭️ 未來活動</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              共 {futureActivities.length} 個活動
             </p>
           </div>
         )}
@@ -119,9 +168,13 @@ const Home = () => {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🏃</div>
             <p className="text-gray-600 text-lg">
-              {viewMode === 'all' ? '目前沒有任何活動' : '這天還沒有活動'}
+              {viewMode === 'past' ? '目前沒有過去的活動' : 
+               viewMode === 'future' ? '目前沒有未來的活動' : 
+               '這天還沒有活動'}
             </p>
-            <p className="text-gray-500 text-sm mt-2">快來發起第一個揪團吧！</p>
+            <p className="text-gray-500 text-sm mt-2">
+              {viewMode === 'date' ? '快來發起第一個揪團吧！' : '尚無活動記錄'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -129,7 +182,7 @@ const Home = () => {
               <ActivityCard 
                 key={activity.id} 
                 activity={activity}
-                showFullDate={viewMode === 'all'}
+                showFullDate={viewMode !== 'date'}
               />
             ))}
           </div>
