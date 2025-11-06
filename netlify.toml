@@ -9,12 +9,7 @@
 [functions]
   node_bundler = "esbuild"
 
-# SPA 路由設定（Functions 優先）
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
+# SPA 路由設定
 [[redirects]]
   from = "/*"
   to = "/index.html"
