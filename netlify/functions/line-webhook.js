@@ -107,28 +107,49 @@ exports.handler = async (event, context) => {
         console.log('💬 訊息內容:', evt.message.text);
       }
 
-      // 處理加入事件 - 發送歡迎訊息
+      // 記錄機器人加入事件（用於取得群組 ID）
       if (evt.type === 'join') {
-        console.log('🎉 機器人被加入群組');
+        console.log('🤖 機器人被加入群組');
         if (evt.source.type === 'group') {
           console.log('🎯 新群組 ID:', evt.source.groupId);
+          console.log('📝 請將此群組 ID 設定到環境變數 LINE_GROUP_ID');
+        }
+      }
+
+      // 處理新成員加入事件 - 發送歡迎訊息
+      if (evt.type === 'memberJoined') {
+        console.log('👥 有新成員加入群組');
+        
+        if (evt.source.type === 'group') {
+          console.log('🎯 群組 ID:', evt.source.groupId);
           
-          // 發送歡迎訊息
-          try {
-            await sendLineMessage(evt.replyToken, [
-              {
-                type: 'text',
-                text: '🎉 大家好！我是板橋路跑小幫手！\n\n' +
-                      '我可以幫助大家：\n' +
-                      '✅ 查看最新的路跑活動\n' +
-                      '✅ 接收活動提醒通知\n' +
-                      '✅ 管理報名活動\n\n' +
-                      '歡迎大家一起來參加板橋路跑活動！💪🏃‍♂️'
-              }
-            ]);
-            console.log('✅ 歡迎訊息已發送');
-          } catch (error) {
-            console.error('❌ 發送歡迎訊息失敗:', error.message);
+          // 記錄新加入的成員
+          const newMembers = evt.joined.members || [];
+          console.log('新成員數量:', newMembers.length);
+          
+          // 過濾掉機器人自己（type 為 'user' 的才是真實用戶）
+          const realUsers = newMembers.filter(member => member.type === 'user');
+          
+          if (realUsers.length > 0) {
+            console.log('真實用戶加入數量:', realUsers.length);
+            
+            // 發送歡迎訊息
+            try {
+              await sendLineMessage(evt.replyToken, [
+                {
+                  type: 'text',
+                  text: '🎉 大家好！我是板橋路跑小幫手！\n\n' +
+                        '我每天會提醒大家：\n' +
+                        '今天及明天最新的路跑活動\n\n' +
+                        '也可以透過 https://banqiaorun2025.netlify.app/\n' +
+                        '一起揪團跑\n\n' +
+                        '歡迎大家一起來參加板橋路跑活動！💪🏃‍♂️'
+                }
+              ]);
+              console.log('✅ 新成員歡迎訊息已發送');
+            } catch (error) {
+              console.error('❌ 發送歡迎訊息失敗:', error.message);
+            }
           }
         }
       }
