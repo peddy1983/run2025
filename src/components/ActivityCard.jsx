@@ -4,10 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
+const ActivityCard = ({ activity, onUpdate, showFullDate = false, showLineNotify = false }) => {
   const { user } = useAuth();
   const [showParticipants, setShowParticipants] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [notifying, setNotifying] = useState(false);
 
   const isParticipating = user && activity.participants?.some(p => p.uid === user.uid);
   const isCreator = user && activity.creatorId === user.uid;
@@ -77,6 +78,46 @@ const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLineNotify = async () => {
+    if (!confirm('確定要推播此活動到 LINE 群組嗎？')) {
+      return;
+    }
+
+    setNotifying(true);
+    try {
+      const response = await fetch('/.netlify/functions/send-line-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          activity: {
+            activityNumber: activity.activityNumber || activity.runNumber,
+            creatorName: activity.creatorName,
+            date: activity.date,
+            pace: activity.pace,
+            distance: activity.distance,
+            route: activity.route,
+            notes: activity.notes
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('✅ LINE 通知已發送！');
+      } else {
+        throw new Error(result.error || '發送失敗');
+      }
+    } catch (error) {
+      console.error('❌ 發送 LINE 通知失敗:', error);
+      alert(`❌ 推播失敗\n\n${error.message}\n\n請稍後再試`);
+    } finally {
+      setNotifying(false);
     }
   };
 
@@ -218,6 +259,28 @@ const ActivityCard = ({ activity, onUpdate, showFullDate = false }) => {
           <span className="flex-1 py-2 text-center text-sm text-gray-500 border border-gray-200 rounded-lg">
             這是您發起的活動
           </span>
+        )}
+        
+        {/* LINE 推播按鈕（只給建立者使用） */}
+        {showLineNotify && isCreator && (
+          <button
+            onClick={handleLineNotify}
+            disabled={notifying}
+            className="py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+            title="推播活動到 LINE 群組"
+          >
+            {notifying ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                <span>推播中...</span>
+              </>
+            ) : (
+              <>
+                <span>📢</span>
+                <span>LINE通知</span>
+              </>
+            )}
+          </button>
         )}
       </div>
     </div>

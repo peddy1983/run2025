@@ -158,7 +158,10 @@ const MyActivities = () => {
               ) : (
                 myCreatedActivities.map((activity) => (
                   <div key={activity.id}>
-                    <ActivityCard activity={activity} />
+                    <ActivityCard 
+                      activity={activity} 
+                      showLineNotify={true}
+                    />
                     <div className="flex space-x-2 mt-2">
                       <button
                         onClick={() => handleEdit(activity.id)}
